@@ -1,0 +1,7 @@
+shell=bash
+severity=warning
+external-sources=true
+
+# Disable "Variable appears unused" globally. 
+# This stops ShellCheck from complaining about sourced pipeline variables.
+disable=SC2034
