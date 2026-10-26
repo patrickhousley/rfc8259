@@ -7,10 +7,11 @@ SCRIPTS_ROOT="${PROJECT_ROOT}/scripts"
 COMMANDS=()
 declare -A COMMAND_REGISTRY
 
-# shellcheck source=scripts/color.sh
-source "$SCRIPTS_ROOT/color.sh"
-# shellcheck source=scripts/log.sh
-source "$SCRIPTS_ROOT/log.sh"
+# Helpers
+# shellcheck source=scripts/color.bash
+source "$SCRIPTS_ROOT/color.bash"
+# shellcheck source=scripts/log.bash
+source "$SCRIPTS_ROOT/log.bash"
 
 _check_command_exists() {
 	if [[ -z "${COMMAND_REGISTRY[$command]+abc}" ]]; then
@@ -44,21 +45,22 @@ _register_command() {
 	COMMAND_REGISTRY["${command}:help"]=$help_length
 }
 
-# shellcheck source=scripts/help.sh
-source "$SCRIPTS_ROOT/help.sh"
-# shellcheck source=scripts/lint.sh
-source "$SCRIPTS_ROOT/lint.sh"
-# shellcheck source=scripts/format.sh
-source "$SCRIPTS_ROOT/format.sh"
-# shellcheck source=scripts/data.sh
-source "$SCRIPTS_ROOT/data.sh"
+# Commands
+# shellcheck source=scripts/help.bash
+source "$SCRIPTS_ROOT/help.bash"
+# shellcheck source=scripts/lint.bash
+source "$SCRIPTS_ROOT/lint.bash"
+# shellcheck source=scripts/format.bash
+source "$SCRIPTS_ROOT/format.bash"
 
-# shellcheck source=scripts/check.sh
-source "$SCRIPTS_ROOT/check.sh"
+# Proxy commands
+# shellcheck source=scripts/check.bash
+source "$SCRIPTS_ROOT/check.bash"
 
 _main() {
 	local verbose_found=false
 	local args=()
+	local command
 
 	for arg in "$@"; do
 		case "${arg,,}" in
@@ -67,7 +69,6 @@ _main() {
 			shift
 			;;
 		*)
-			# Save non-verbose arguments into an array
 			args+=("$arg")
 			;;
 		esac
@@ -77,8 +78,12 @@ _main() {
 		_log_toggle_verbose
 	fi
 
-	local command="${args[0]:-help}"
-	shift
+	command="${args[0]:-}"
+	if [[ -z "${command}" ]]; then
+		command="help"
+	else
+		args=("${args[@]:1}")
+	fi
 
 	if ! _check_command_exists "${command}"; then
 		_log "commander" "Unknown command: ${command}" "fatal"
@@ -86,11 +91,11 @@ _main() {
 
 	local target_func="${COMMAND_REGISTRY["${command}:func_name"]}"
 	if _log_is_verbose_enabled; then
-		_log "commander" "Running ${target_func} for command ${command} with arguments: [$*]" "verbose"
+		_log "commander" "Running ${target_func} for command ${command} with arguments: [${args[@]}]" "verbose"
 	fi
 
 	pushd "$PROJECT_ROOT" >/dev/null
-	"$target_func" "$@"
+	"$target_func" "${args[@]}"
 	popd >/dev/null
 }
 

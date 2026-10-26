@@ -25,10 +25,10 @@ _format_main() {
 	local exit_code=0
 	if [[ $write -eq 0 ]]; then
 		_log "formatter" "Running shfmt in write mode..." "verbose"
-		shfmt -ln bash -w "$PROJECT_ROOT" || exit_code=$?
+		shfmt -w "$PROJECT_ROOT" || exit_code=$?
 	else
 		_log "formatter" "Running shfmt in check mode..." "verbose"
-		shfmt -ln bash -d "$PROJECT_ROOT" || exit_code=$?
+		shfmt -d "$PROJECT_ROOT" || exit_code=$?
 	fi
 
 	if [[ $exit_code -ne 0 ]]; then
