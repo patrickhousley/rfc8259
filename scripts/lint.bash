@@ -1,103 +1,123 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-_register_command "lint" "lint" "_lint_main" \
-	"Runs all lint tooling against the repository" \
-	"-w/--write    Enable shellcheck autofixing"
+SHELLCHECK_MODULE_BIN="${MODULES_ROOT}/shellcheck/shellcheck"
+_register_command \
+  --command="lint" \
+  --func-name="_lint_main" \
+  --summary="Runs all lint tooling against the repository" \
+  --help="--write    Enable shellcheck autofixing"
 
 _lint_main() {
-	if ! command -v "shellcheck" >/dev/null 2>&1; then
-		_log "linter" "Binary [shellcheck] not installed" "fatal"
-	fi
+  if [[ ! -f "${SHELLCHECK_MODULE_BIN}" ]]; then
+    _module_download \
+      --name="shellcheck" \
+      --download-url="https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.linux.x86_64.tar.gz" \
+      --sha256="b7af85e41cc99489dcc21d66c6d5f3685138f06d34651e6d34b42ec6d54fe6f6" \
+      --tar
+  fi
+  if [[ ! -x "${SHELLCHECK_MODULE_BIN}" ]]; then
+    chmod ug+x "${SHELLCHECK_MODULE_BIN}"
+  fi
 
-	local write=1
-	for arg in "$@"; do
-		case "${arg,,}" in
-		-w | --write)
-			write=0
-			;;
-		*)
-			_log "linter" "Unknown command argument [${arg}]" "fatal"
-			;;
-		esac
-	done
+  local write=0
 
-	local exit_code=0
-	if [[ $write -eq 0 ]]; then
-		_log "linter" "Running shellcheck in write mode..." "verbose"
-		_lint_shellcheck_write_loop || exit_code=$?
-	else
-		_log "linter" "Running shellcheck in check mode..." "verbose"
-		find . \( -path "./test-suite" -o -path "./data" \) -prune -o -name "*.sh" -exec shellcheck {} + || exit_code=$?
-	fi
+  for arg in "$@"; do
+    case "${arg,,}" in
+    --write)
+      write=1
+      shift 1
+      ;;
+    *)
+      _log "_lint_main" "Unknown command argument [${arg}]" "fatal"
+      ;;
+    esac
+  done
 
-	if [[ $exit_code -ne 0 ]]; then
-		_log "linter" "Repository files have lint errors" "fatal"
-	else
-		_log "linter" "Repository files linted" "success"
-	fi
+  local exit_code=0
+  if [[ $write -eq 1 ]]; then
+    _log "_lint_main" "Running shellcheck in write mode..." "verbose"
+    _lint_shellcheck_write_loop || exit_code=$?
+  else
+    _log "_lint_main" "Running shellcheck in check mode..." "verbose"
+    _lint_shellcheck_run || exit_code=$?
+  fi
+
+  if [[ $exit_code -ne 0 ]]; then
+    _log "_lint_main" "Repository files have lint errors" "fatal"
+  else
+    _log "_lint_main" "Repository files linted" "success"
+  fi
 }
 
 _lint_shellcheck_write_loop() {
-	local exit_code=0
-	local patch_file
-	local error
+  local exit_code=0
+  local patch_file
+  local error
 
-	while true; do
-		patch_file=$(mktemp)
-		_lint_shellcheck_write_diff "${patch_file}" || true
+  while true; do
+    patch_file=$(mktemp)
+    _lint_shellcheck_write_diff "${patch_file}" || true
 
-		if [[ -f "${patch_file}.err" && -s "${patch_file}.err" ]]; then
-			while read -r line; do
-				error=$(_lint_shellcheck_fmt_error "${line}")
-				_log "linter" "${error}" "error"
-			done <"${patch_file}.err"
-			exit_code=1
-		elif [[ -f "${patch_file}" && -s "${patch_file}" ]]; then
-			sed -i 's|a/\./|a/|g; s|b/\./|b/|g' "${patch_file}"
-			_lint_shellcheck_apply_diff "$patch_file" || exit_code=$?
-		else
-			break
-		fi
+    if [[ -f "${patch_file}.err" && -s "${patch_file}.err" ]]; then
+      while read -r line; do
+        error=$(_lint_shellcheck_fmt_error "${line}")
+        _log "linter" "${error}" "error"
+      done <"${patch_file}.err"
+      exit_code=1
+    elif [[ -f "${patch_file}" && -s "${patch_file}" ]]; then
+      sed -i 's|a/\./|a/|g; s|b/\./|b/|g' "${patch_file}"
+      _lint_shellcheck_apply_diff "$patch_file" || exit_code=$?
+    else
+      rm -f "${patch_file}" "${patch_file}.err"
+      break
+    fi
 
-		if [[ $exit_code -ne 0 ]]; then
-			break
-		fi
-	done
+    rm -f "${patch_file}" "${patch_file}.err"
 
-	return $exit_code
+    if [[ $exit_code -ne 0 ]]; then
+      break
+    fi
+  done
+
+  return $exit_code
+}
+
+_lint_shellcheck_run() {
+  local output_format="${1:-tty}"
+  find . \( -path "./modules" \) -prune -o \( -name "*.bash" -or -name "*.bats" \) -exec """${SHELLCHECK_MODULE_BIN}""" --format "${output_format}" {} +
 }
 
 _lint_shellcheck_write_diff() {
-	local patch_file="${1}"
+  local patch_file="${1}"
 
-	_log "linter" "Writing patch file to ${patch_file}" "verbose"
-	_log "linter" "Writing patch error file to ${patch_file}.err" "verbose"
-	find . \( -path "./test-suite" -o -path "./data" \) -prune -o -name "*.sh" -exec shellcheck -f diff {} + >"${patch_file}" 2>"${patch_file}.err" || true
+  _log "_lint_shellcheck_write_diff" "Writing patch file to ${patch_file}" "verbose"
+  _log "_lint_shellcheck_write_diff" "Writing patch error file to ${patch_file}.err" "verbose"
+  _lint_shellcheck_run "diff" >"${patch_file}" 2>"${patch_file}.err" || true
 }
 
 _lint_shellcheck_apply_diff() {
-	local patch_file="${1}"
-	local exit_code=0
+  local patch_file="${1}"
+  local exit_code=0
 
-	if [[ -s "$patch_file" ]]; then
-		_log "linter" "Applying auto-fixes to files..." "verbose"
-		git apply "$patch_file" || exit_code=$?
-	fi
+  if [[ -s "$patch_file" ]]; then
+    _log "_lint_shellcheck_apply_diff" "Applying auto-fixes to files..." "verbose"
+    git apply "$patch_file" || exit_code=$?
+  fi
 
-	return $exit_code
+  return $exit_code
 }
 
 _lint_shellcheck_fmt_error() {
-	local error="${1}"
-	local find
-	local replace
+  local error="${1}"
+  local find
+  local replace
 
-	if [[ "${error}" == *"none were auto-fixable"* ]]; then
-		find="Use another format"
-		replace="Use check mode"
-		error=${error//$find/$replace}
-	fi
+  if [[ "${error}" == *"none were auto-fixable"* ]]; then
+    find="Use another format"
+    replace="Use check mode"
+    error=${error//$find/$replace}
+  fi
 
-	echo "${error}"
+  echo "${error}"
 }
