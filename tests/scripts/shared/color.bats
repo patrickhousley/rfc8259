@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
 
 setup() {
-  load '../helpers/unit_setup'
+  load '../../helpers/unit_setup'
 
   _unit_setup
 }
@@ -18,15 +18,22 @@ setup() {
   assert_equal "${BOLD}" "$(tput bold)"
 }
 
+# Runs from a file instead of bash -c because kcov reads BASH_SOURCE, which is unset in a -c string
+_write_source_script() {
+  printf '%s\n' "source '${SCRIPTS_ROOT}/shared/color.bash' && echo sourced" >"${BATS_TEST_TMPDIR}/source_color.bash"
+}
+
 @test "can be sourced on a terminal without color support" {
-  run env TERM=dumb bash -c "source '${SCRIPTS_ROOT}/shared/color.bash' && echo sourced"
+  _write_source_script
+  run env TERM=dumb bash "${BATS_TEST_TMPDIR}/source_color.bash"
 
   assert_success
   assert_output "sourced"
 }
 
 @test "can be sourced without a terminal type" {
-  run env -u TERM bash -c "source '${SCRIPTS_ROOT}/shared/color.bash' && echo sourced"
+  _write_source_script
+  run env -u TERM bash "${BATS_TEST_TMPDIR}/source_color.bash"
 
   assert_success
   assert_output "sourced"

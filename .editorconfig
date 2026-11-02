@@ -14,3 +14,6 @@ ignore = true
 
 [data/**]
 ignore = true
+
+[reports/**]
+ignore = true

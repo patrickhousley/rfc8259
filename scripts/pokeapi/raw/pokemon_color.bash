@@ -41,10 +41,8 @@ _pokeapi_pokemon_color_main() {
     _log "_pokeapi_pokemon_color_main" "--list or --retrieve parameters mutually exclusive" "fatal"
   elif [[ $do_list -eq 1 ]]; then
     _pokeapi_pokemon_color_list result_file "${args[@]}"
-  elif [[ $do_retrieve -eq 1 ]]; then
-    _pokeapi_pokemon_color_retrieve result_file "${args[@]}"
   else
-    echo "Do help here"
+    _pokeapi_pokemon_color_retrieve result_file "${args[@]}"
   fi
 
   _log "_pokeapi_pokemon_color_main" "Downloaded saved to ${result_file}" "verbose"

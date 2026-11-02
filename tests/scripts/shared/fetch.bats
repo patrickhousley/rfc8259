@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
 
 setup() {
-  load '../helpers/unit_setup'
+  load '../../helpers/unit_setup'
 
   _unit_setup
   _unit_source_script "shared/fetch"
@@ -242,12 +242,14 @@ _download() {
   printf 'HTTP/1.1 200 OK\r\n' >"${HEADERS_FILE}"
 
   # bats disables errexit inside run so the real script behaviour needs its own shell
-  run bash -euo pipefail -c '
-    source "$1/shared/color.bash"
-    source "$1/shared/log.bash"
-    source "$1/shared/fetch.bash"
-    _fetch_download --url="$2" --out-file="$3" --sha256="" --cache --headers-file="$4"
-  ' _ "${SCRIPTS_ROOT}" "${URL}" "${OUT_FILE}" "${HEADERS_FILE}"
+  # It runs from a file instead of bash -c because kcov reads BASH_SOURCE, which is unset in a -c string
+  cat >"${BATS_TEST_TMPDIR}/download.bash" <<'EOF'
+source "$1/shared/color.bash"
+source "$1/shared/log.bash"
+source "$1/shared/fetch.bash"
+_fetch_download --url="$2" --out-file="$3" --sha256="" --cache --headers-file="$4"
+EOF
+  run bash -euo pipefail "${BATS_TEST_TMPDIR}/download.bash" "${SCRIPTS_ROOT}" "${URL}" "${OUT_FILE}" "${HEADERS_FILE}"
 
   assert_success
   assert_equal "$(stub_calls curl | wc -l)" "1"

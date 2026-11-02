@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
 
 setup() {
-  load '../helpers/unit_setup'
+  load '../../helpers/unit_setup'
 
   _unit_setup
   _unit_source_script "shared/system"

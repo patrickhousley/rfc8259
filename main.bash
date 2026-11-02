@@ -6,6 +6,7 @@ PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 MODULES_ROOT="${PROJECT_ROOT}/modules"
 SCRIPTS_ROOT="${PROJECT_ROOT}/scripts"
 DATA_ROOT="${PROJECT_ROOT}/data"
+REPORTS_ROOT="${PROJECT_ROOT}/reports"
 
 # shellcheck source=scripts/shared/system.bash
 source "$SCRIPTS_ROOT/shared/system.bash"

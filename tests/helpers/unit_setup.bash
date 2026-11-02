@@ -20,6 +20,7 @@ _unit_setup() {
   # Scripts resolve tool binaries from here, so tests never touch the real modules
   MODULES_ROOT="${BATS_TEST_TMPDIR}/modules"
   DATA_ROOT="${BATS_TEST_TMPDIR}/data"
+  REPORTS_ROOT="${BATS_TEST_TMPDIR}/reports"
   # shellcheck source=scripts/shared/color.bash
   source "${SCRIPTS_ROOT}/shared/color.bash"
   # shellcheck source=scripts/shared/log.bash

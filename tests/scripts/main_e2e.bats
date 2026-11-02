@@ -1,9 +1,9 @@
 #!/usr/bin/env bats
 
 setup() {
-  load 'helpers/common_setup'
-  load 'helpers/log_fixture'
-  load 'helpers/stub_fixture'
+  load '../helpers/common_setup'
+  load '../helpers/log_fixture'
+  load '../helpers/stub_fixture'
 
   _common_setup
   _stub_setup

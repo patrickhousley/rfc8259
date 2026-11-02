@@ -31,6 +31,41 @@ jobs:
 
   test:
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      checks: write
     steps:
       - uses: actions/checkout@v5
-      - run: ./main.bash test
+      - name: Install kcov
+        run: sudo apt-get update && sudo apt-get install -y kcov
+      - run: ./main.bash test --junit --coverage
+      - name: Publish test results
+        if: ${{ !cancelled() }}
+        uses: mikepenz/action-junit-report@v6
+        with:
+          report_paths: reports/junit/report.xml
+          test_files_prefix: tests/
+          check_name: Test results
+          require_tests: true
+          detailed_summary: true
+          include_passed: true
+      - name: Summarize results
+        if: ${{ !cancelled() }}
+        run: |
+          {
+            echo "### Tests"
+            awk -F'"' '/<testsuite /{for(i=1;i<NF;i++){if($i~/ tests=$/)t+=$(i+1); if($i~/ failures=$/)f+=$(i+1)}} END{print t" tests, "f" failures"}' reports/junit/report.xml
+            echo "### Coverage"
+            coverage_json="$(find reports/coverage -name coverage.json | sort | head -n 1)"
+            if [[ -n "${coverage_json}" ]]; then
+              jq -r '"\(.percent_covered)% (\(.covered_lines)/\(.total_lines) lines)"' "${coverage_json}"
+            else
+              echo "No coverage report was produced"
+            fi
+          } >>"${GITHUB_STEP_SUMMARY}"
+      - name: Upload reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: test-reports
+          path: reports/
