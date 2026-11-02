@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Prints the value of a header from the final response in a curl dump-header file
-#
-# curl writes one header block per redirect hop, only the last block is relevant
 _fetch_header_value() {
   local headers_file="${1}"
   local name="${2,,}"
@@ -21,6 +18,18 @@ _fetch_header_value() {
     }
     END { print value }
   ' "${headers_file}"
+}
+
+_fetch_append_query() {
+  local url="${1}"
+  local key="${2}"
+  local val="${3:-}"
+
+  if [[ "${url}" == *"?"* ]]; then
+    echo "${url}&${key}=${val}"
+  else
+    echo "${url}?${key}=${val}"
+  fi
 }
 
 _fetch_download() {
@@ -74,7 +83,7 @@ _fetch_download() {
       shift 1
       ;;
     *)
-      _log "_fetch_download" "Unknown command argument [${1}]" "fatal"
+      _log "_fetch_download" "Unknown argument [${1}]" "fatal"
       ;;
     esac
   done

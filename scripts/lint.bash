@@ -85,7 +85,15 @@ _lint_shellcheck_write_loop() {
 
 _lint_shellcheck_run() {
   local output_format="${1:-tty}"
-  find . \( -path "./modules" \) -prune -o \( -name "*.bash" -or -name "*.bats" \) -exec """${SHELLCHECK_MODULE_BIN}""" --format "${output_format}" {} +
+  local file_list=()
+
+  while IFS= read -r -d '' file; do
+    [ -f "$file" ] && file_list+=("$file")
+  done < <(git ls-files -z --exclude-standard "*.bash" "*.bats")
+
+  if [ ${#file_list[@]} -gt 0 ]; then
+    "${SHELLCHECK_MODULE_BIN}" --format "${output_format}" "${file_list[@]}"
+  fi
 }
 
 _lint_shellcheck_write_diff() {

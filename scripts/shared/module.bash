@@ -33,7 +33,7 @@ _module_git_clone() {
       shift 1
       ;;
     *)
-      _log "_module_git_clone" "Unknown command argument [${1}]" "fatal"
+      _log "_module_git_clone" "Unknown argument [${1}]" "fatal"
       ;;
     esac
   done
@@ -127,7 +127,7 @@ _module_download() {
       shift 1
       ;;
     *)
-      _log "_module_download" "Unknown command argument [${1}]" "fatal"
+      _log "_module_download" "Unknown argument [${1}]" "fatal"
       ;;
     esac
   done

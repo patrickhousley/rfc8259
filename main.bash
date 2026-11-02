@@ -5,6 +5,7 @@ MAIN_SCRIPT="${BASH_SOURCE[0]}"
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 MODULES_ROOT="${PROJECT_ROOT}/modules"
 SCRIPTS_ROOT="${PROJECT_ROOT}/scripts"
+DATA_ROOT="${PROJECT_ROOT}/data"
 
 # Helpers
 # shellcheck source=scripts/shared/color.bash
@@ -27,10 +28,8 @@ source "$SCRIPTS_ROOT/lint.bash"
 source "$SCRIPTS_ROOT/format.bash"
 # shellcheck source=scripts/test.bash
 source "$SCRIPTS_ROOT/test.bash"
-
-# Proxy commands
-# shellcheck source=scripts/check.bash
-source "$SCRIPTS_ROOT/check.bash"
+# shellcheck source=scripts/pokeapi/pokeapi.bash
+source "$SCRIPTS_ROOT/pokeapi/pokeapi.bash"
 
 _main() {
   local verbose_found=false
@@ -61,20 +60,12 @@ _main() {
     args=("${args[@]:1}")
   fi
 
-  if ! _check_command_exists "${command}"; then
-    _log "commander" "Unknown command: ${command}" "fatal"
-  fi
-
-  local target_func="${COMMAND_REGISTRY["${command}:func_name"]}"
-  if _log_is_verbose_enabled; then
-    _log "commander" "Running ${target_func} for command ${command} with arguments: [${args[*]}]" "verbose"
-  fi
+  mkdir -p "${MODULES_ROOT}"
+  mkdir -p "${DATA_ROOT}"
 
   pushd "$PROJECT_ROOT" >/dev/null
-  "$target_func" "${args[@]}"
+  _run_command "${command}" "${args[@]}"
   popd >/dev/null
 }
 
 _main "$@"
-# _log_toggle_verbose
-# _module_download "shellcheck" "https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.linux.x86_64.tar.gz"
