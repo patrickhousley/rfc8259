@@ -9,17 +9,6 @@ _register_command \
   --help="--write    Enable shellcheck autofixing"
 
 _lint_main() {
-  if [[ ! -f "${SHELLCHECK_MODULE_BIN}" ]]; then
-    _module_download \
-      --name="shellcheck" \
-      --download-url="https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.linux.x86_64.tar.gz" \
-      --sha256="b7af85e41cc99489dcc21d66c6d5f3685138f06d34651e6d34b42ec6d54fe6f6" \
-      --tar
-  fi
-  if [[ ! -x "${SHELLCHECK_MODULE_BIN}" ]]; then
-    chmod ug+x "${SHELLCHECK_MODULE_BIN}"
-  fi
-
   local write=0
 
   for arg in "$@"; do
@@ -33,6 +22,17 @@ _lint_main() {
       ;;
     esac
   done
+
+  if [[ ! -f "${SHELLCHECK_MODULE_BIN}" ]]; then
+    _module_download \
+      --name="shellcheck" \
+      --download-url="https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.linux.x86_64.tar.gz" \
+      --sha256="b7af85e41cc99489dcc21d66c6d5f3685138f06d34651e6d34b42ec6d54fe6f6" \
+      --tar
+  fi
+  if [[ ! -x "${SHELLCHECK_MODULE_BIN}" ]]; then
+    chmod ug+x "${SHELLCHECK_MODULE_BIN}"
+  fi
 
   local exit_code=0
   if [[ $write -eq 1 ]]; then

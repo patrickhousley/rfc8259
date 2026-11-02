@@ -12,18 +12,5 @@ source "$SCRIPTS_ROOT/pokeapi/raw/pokemon.bash"
 source "$SCRIPTS_ROOT/pokeapi/raw/pokemon_color.bash"
 
 _pokeapi_main() {
-  local sub_command
-
-  if [[ -z "${1:-}" ]]; then
-    sub_command="help"
-  else
-    sub_command="${1}"
-    shift 1
-  fi
-
-  if [[ $# -gt 0 ]]; then
-    _run_sub_command "pokeapi" "${sub_command}" "${@}"
-  else
-    _run_sub_command "pokeapi" "${sub_command}"
-  fi
+  _run_sub_command "pokeapi" "$@"
 }

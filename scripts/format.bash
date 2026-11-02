@@ -9,16 +9,6 @@ _register_command \
   --help="--write    Enable shfmt writing"
 
 _format_main() {
-  if [[ ! -f "${SHFMT_MODULE_BIN}" ]]; then
-    _module_download \
-      --name="shfmt" \
-      --download-url="https://github.com/mvdan/sh/releases/download/v3.14.1/shfmt_v3.14.1_linux_amd64" \
-      --sha256="76e77641faa025814b77f153b29796b8e6fa2fca03e0c76a691608b86c7ea7bf"
-  fi
-  if [[ ! -x "${SHFMT_MODULE_BIN}" ]]; then
-    chmod ug+x "${SHFMT_MODULE_BIN}"
-  fi
-
   local write=0
 
   for arg in "$@"; do
@@ -32,6 +22,16 @@ _format_main() {
       ;;
     esac
   done
+
+  if [[ ! -f "${SHFMT_MODULE_BIN}" ]]; then
+    _module_download \
+      --name="shfmt" \
+      --download-url="https://github.com/mvdan/sh/releases/download/v3.14.1/shfmt_v3.14.1_linux_amd64" \
+      --sha256="76e77641faa025814b77f153b29796b8e6fa2fca03e0c76a691608b86c7ea7bf"
+  fi
+  if [[ ! -x "${SHFMT_MODULE_BIN}" ]]; then
+    chmod ug+x "${SHFMT_MODULE_BIN}"
+  fi
 
   local exit_code=0
   if [[ $write -eq 1 ]]; then

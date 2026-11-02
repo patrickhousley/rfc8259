@@ -43,3 +43,25 @@ setup() {
   assert_failure
   assert_log --scope "commander" --level "fatal" "Sub-command [pokeapi:bogus] not registered"
 }
+
+@test "_pokeapi_main prints the command help without a sub-command" {
+  run _pokeapi_main
+
+  assert_success
+  assert_line --regexp "^Usage: .* pokeapi <sub-command> "
+  assert_line "Sub-commands:"
+}
+
+@test "_pokeapi_main prints the command help for the help flag" {
+  run _pokeapi_main "--help"
+
+  assert_success
+  assert_line --regexp "^Usage: .* pokeapi <sub-command> "
+}
+
+@test "_pokeapi_main prints the sub-command help for the help flag" {
+  run _pokeapi_main "fake" "--help"
+
+  assert_success
+  assert_line --regexp "^Usage: .* pokeapi fake \[options\]$"
+}

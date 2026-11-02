@@ -19,14 +19,14 @@ source "$SCRIPTS_ROOT/shared/color.bash"
 source "$SCRIPTS_ROOT/shared/log.bash"
 # shellcheck source=scripts/shared/module.bash
 source "$SCRIPTS_ROOT/shared/module.bash"
+# shellcheck source=scripts/shared/help.bash
+source "$SCRIPTS_ROOT/shared/help.bash"
 # shellcheck source=scripts/shared/fetch.bash
 source "$SCRIPTS_ROOT/shared/fetch.bash"
 # shellcheck source=scripts/shared/commander.bash
 source "$SCRIPTS_ROOT/shared/commander.bash"
 
 # Commands
-# shellcheck source=scripts/help.bash
-source "$SCRIPTS_ROOT/help.bash"
 # shellcheck source=scripts/lint.bash
 source "$SCRIPTS_ROOT/lint.bash"
 # shellcheck source=scripts/format.bash
@@ -59,11 +59,11 @@ _main() {
   fi
 
   command="${args[0]:-}"
-  if [[ -z "${command}" ]]; then
-    command="help"
-  else
-    args=("${args[@]:1}")
+  if [[ -z "${command}" || "${command,,}" == "-h" || "${command,,}" == "--help" ]]; then
+    _print_help
+    return 0
   fi
+  args=("${args[@]:1}")
 
   mkdir -p "${MODULES_ROOT}"
   mkdir -p "${DATA_ROOT}"

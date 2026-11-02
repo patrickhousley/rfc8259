@@ -12,19 +12,19 @@ setup() {
   export TERM="xterm-256color"
 }
 
-@test "defaults to help command" {
+@test "prints the help without a command" {
   run main.bash
 
   assert_success
-  assert_output --regexp 'Example:.*?main.bash command'
+  assert_output --regexp 'Usage:.*?main.bash \[-v\|--verbose\] <command>'
 }
 
-@test "help lists every command" {
-  run main.bash help
+@test "help flag lists every command" {
+  run main.bash --help
 
   assert_success
   local command
-  for command in help lint format test pokeapi pokeclient; do
+  for command in lint format test pokeapi pokeclient; do
     assert_line --regexp "^  ${command} +[A-Z]"
   done
 }
@@ -38,34 +38,33 @@ setup() {
 }
 
 @test "verbose flag enables verbose logging" {
-  run main.bash --verbose help
+  run main.bash --verbose --help
 
   assert_success
   assert_log --scope "logger" --level "verbose" "Enabled verbose logging"
-  assert_log --scope "commander" --level "verbose" "Running _help_main for command help with arguments: []"
 }
 
 @test "runs on a terminal without color support" {
-  TERM=dumb run main.bash help
+  TERM=dumb run main.bash --help
 
   assert_success
-  assert_output --regexp 'Example:.*?main.bash command'
+  assert_output --regexp 'Usage:.*?main.bash \[-v\|--verbose\] <command>'
 }
 
 @test "runs without a terminal type" {
-  run env -u TERM main.bash help
+  run env -u TERM main.bash --help
 
   assert_success
-  assert_output --regexp 'Example:.*?main.bash command'
+  assert_output --regexp 'Usage:.*?main.bash \[-v\|--verbose\] <command>'
 }
 
 @test "runs from any working directory" {
   cd "${BATS_TEST_TMPDIR}"
 
-  run main.bash help
+  run main.bash --help
 
   assert_success
-  assert_output --regexp 'Example:.*?main.bash command'
+  assert_output --regexp 'Usage:.*?main.bash \[-v\|--verbose\] <command>'
 }
 
 @test "format rejects unknown arguments" {
@@ -83,7 +82,7 @@ setup() {
 }
 
 @test "verbose flag is accepted after the command" {
-  run main.bash help --verbose
+  run main.bash --help --verbose
 
   assert_success
   assert_log --scope "logger" --level "verbose" "Enabled verbose logging"
@@ -92,9 +91,49 @@ setup() {
 @test "fails when a required binary is too old" {
   stub_command "curl" "echo 'curl 7.0.0'"
 
-  PATH="${STUB_BIN}:${PATH}" run main.bash help
+  PATH="${STUB_BIN}:${PATH}" run main.bash --help
 
   assert_failure
   assert_log --scope "system" --level "error" "[curl] 7.0.0 is older than the required 7.76.0"
   assert_log --scope "system" --level "fatal" "System requirements not met"
+}
+
+@test "help is not a command" {
+  run main.bash help
+
+  assert_failure
+  assert_log --scope "commander" --level "fatal" "Unknown command: help"
+}
+
+@test "short help flag prints the help" {
+  run main.bash -h
+
+  assert_success
+  assert_line "Commands:"
+}
+
+@test "commands print their own help" {
+  local command
+  for command in lint format test pokeapi pokeclient; do
+    run main.bash "${command}" --help
+
+    assert_success
+    assert_line --regexp "^Usage: .*main.bash ${command} "
+  done
+}
+
+@test "sub-commands print their own help" {
+  run main.bash pokeapi pokemon --help
+
+  assert_success
+  assert_line --regexp "^Usage: .*main.bash pokeapi pokemon \[options\]$"
+  assert_line "Options:"
+}
+
+@test "commands without a sub-command print their help" {
+  run main.bash pokeapi
+
+  assert_success
+  assert_line "Sub-commands:"
+  assert_line --regexp "^  pokemon-color +Colors"
 }

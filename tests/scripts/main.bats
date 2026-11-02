@@ -30,13 +30,46 @@ setup() {
   assert_output "pwd=${PROJECT_ROOT} args=[]"
 }
 
-@test "_main defaults to the help command" {
-  _register_command --command="help" --func-name="_fake_main"
+@test "_main prints the help without a command" {
+  _register_command --command="fake" --func-name="_fake_main" --summary="Fake summary"
 
   run _main
 
   assert_success
-  assert_output "pwd=${PROJECT_ROOT} args=[]"
+  assert_line "Commands:"
+  assert_line --regexp "^  fake +Fake summary$"
+  refute_output --partial "pwd="
+}
+
+@test "_main prints the help for the help flag" {
+  _register_command --command="fake" --func-name="_fake_main" --summary="Fake summary"
+
+  local flag
+  for flag in -h --help -H --HELP; do
+    run _main "${flag}"
+
+    assert_success
+    assert_line "Commands:"
+    refute_output --partial "pwd="
+  done
+}
+
+@test "_main prints the command help for the help flag after a command" {
+  _register_command --command="fake" --func-name="_fake_main" --summary="Fake summary"
+
+  run _main "fake" "--help"
+
+  assert_success
+  assert_line --regexp "^Usage: .* fake \[options\]$"
+  assert_line "Fake summary"
+  refute_output --partial "pwd="
+}
+
+@test "_main does not treat help as a command" {
+  run _main "help"
+
+  assert_failure
+  assert_log --scope "commander" --level "fatal" "Unknown command: help"
 }
 
 @test "_main fails on unknown command" {

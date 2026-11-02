@@ -10,18 +10,5 @@ _register_command \
 source "$SCRIPTS_ROOT/pokeapi/data/refresh.bash"
 
 _pokeapi_client_main() {
-  local sub_command
-
-  if [[ -z "${1:-}" ]]; then
-    sub_command="help"
-  else
-    sub_command="${1}"
-    shift 1
-  fi
-
-  if [[ $# -gt 0 ]]; then
-    _run_sub_command "pokeclient" "${sub_command}" "${@}"
-  else
-    _run_sub_command "pokeclient" "${sub_command}"
-  fi
+  _run_sub_command "pokeclient" "$@"
 }

@@ -42,3 +42,25 @@ setup() {
   assert_failure
   assert_log --scope "commander" --level "fatal" "Sub-command [pokeclient:bogus] not registered"
 }
+
+@test "_pokeapi_client_main prints the command help without a sub-command" {
+  run _pokeapi_client_main
+
+  assert_success
+  assert_line --regexp "^Usage: .* pokeclient <sub-command> "
+  assert_line "Sub-commands:"
+}
+
+@test "_pokeapi_client_main prints the command help for the help flag" {
+  run _pokeapi_client_main "--help"
+
+  assert_success
+  assert_line --regexp "^Usage: .* pokeclient <sub-command> "
+}
+
+@test "_pokeapi_client_main prints the sub-command help for the help flag" {
+  run _pokeapi_client_main "fake" "--help"
+
+  assert_success
+  assert_line --regexp "^Usage: .* pokeclient fake \[options\]$"
+}

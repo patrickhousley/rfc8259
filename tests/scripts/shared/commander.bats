@@ -279,3 +279,174 @@ setup() {
   assert_success
   assert_log --scope "commander" --level "verbose" "Running _fake_main for sub-command fake:sub with arguments: [a]"
 }
+
+@test "_register_sub_command keeps registration order" {
+  _register_command --command="fake" --func-name="_fake_main"
+  _register_sub_command --command="fake" --sub-command="b" --func-name="_fake_main"
+  _register_sub_command --command="fake" --sub-command="a" --func-name="_fake_main"
+  _register_sub_command --command="fake" --sub-command="c" --func-name="_fake_main"
+
+  assert_equal "${SUB_COMMANDS[*]}" "fake:b fake:a fake:c"
+}
+
+@test "_command_has_sub_commands is true only for commands with sub-commands" {
+  _register_command --command="plain" --func-name="_fake_main"
+  _register_command --command="group" --func-name="_fake_main"
+  _register_sub_command --command="group" --sub-command="sub" --func-name="_fake_main"
+
+  run _command_has_sub_commands "group"
+  assert_success
+
+  run _command_has_sub_commands "plain"
+  assert_failure
+
+  run _command_has_sub_commands "unknown"
+  assert_failure
+}
+
+@test "_command_has_sub_commands does not match a command that only shares a prefix" {
+  _register_command --command="group" --func-name="_fake_main"
+  _register_command --command="group-two" --func-name="_fake_main"
+  _register_sub_command --command="group-two" --sub-command="sub" --func-name="_fake_main"
+
+  run _command_has_sub_commands "group"
+
+  assert_failure
+}
+
+@test "_args_request_help finds the help flag in any position and case" {
+  run _args_request_help "--help"
+  assert_success
+
+  run _args_request_help "a" "--HELP" "b"
+  assert_success
+
+  run _args_request_help "a" "b"
+  assert_failure
+
+  run _args_request_help
+  assert_failure
+}
+
+@test "_args_request_help ignores values that only contain help" {
+  run _args_request_help "--helpful" "help" "-h"
+
+  assert_failure
+}
+
+@test "_run_command prints the command help instead of running it" {
+  # shellcheck disable=SC2329
+  _fake_main() {
+    echo "ran"
+  }
+  _register_command --command="fake" --func-name="_fake_main" --summary="Fake summary"
+
+  run _run_command "fake" "--help"
+
+  assert_success
+  assert_line --regexp "^Usage: .* fake \[options\]$"
+  assert_line "Fake summary"
+  refute_output --partial "ran"
+}
+
+@test "_run_command prints the command help when the flag is not first" {
+  # shellcheck disable=SC2329
+  _fake_main() {
+    echo "ran"
+  }
+  _register_command --command="fake" --func-name="_fake_main"
+
+  run _run_command "fake" "--write" "--HELP"
+
+  assert_success
+  assert_line --regexp "^Usage: .* fake \[options\]$"
+  refute_output --partial "ran"
+}
+
+@test "_run_command leaves the help flag to commands with sub-commands" {
+  # shellcheck disable=SC2329
+  _fake_main() {
+    echo "ran [$*]"
+  }
+  _register_command --command="group" --func-name="_fake_main"
+  _register_sub_command --command="group" --sub-command="sub" --func-name="_fake_main"
+
+  run _run_command "group" "sub" "--help"
+
+  assert_success
+  assert_output "ran [sub --help]"
+}
+
+@test "_run_command does not print help without the flag" {
+  # shellcheck disable=SC2329
+  _fake_main() {
+    echo "ran"
+  }
+  _register_command --command="fake" --func-name="_fake_main"
+
+  run _run_command "fake" "a"
+
+  assert_success
+  assert_output "ran"
+}
+
+@test "_run_sub_command prints the sub-command help instead of running it" {
+  # shellcheck disable=SC2329
+  _fake_sub_main() {
+    echo "ran"
+  }
+  _register_command --command="group" --func-name="_fake_main"
+  _register_sub_command --command="group" --sub-command="sub" --func-name="_fake_sub_main" \
+    --summary="Sub summary" --help="--option  An option"
+
+  run _run_sub_command "group" "sub" "--help"
+
+  assert_success
+  assert_line --regexp "^Usage: .* group sub \[options\]$"
+  assert_line "Sub summary"
+  assert_line "  --option  An option"
+  refute_output --partial "ran"
+}
+
+@test "_run_sub_command prints the sub-command help when the flag is not first" {
+  # shellcheck disable=SC2329
+  _fake_sub_main() {
+    echo "ran"
+  }
+  _register_command --command="group" --func-name="_fake_main"
+  _register_sub_command --command="group" --sub-command="sub" --func-name="_fake_sub_main"
+
+  run _run_sub_command "group" "sub" "--list" "--Help"
+
+  assert_success
+  assert_line --regexp "^Usage: .* group sub \[options\]$"
+  refute_output --partial "ran"
+}
+
+@test "_run_sub_command prints the command help without a sub-command" {
+  _register_command --command="group" --func-name="_fake_main" --summary="Group summary"
+  _register_sub_command --command="group" --sub-command="sub" --func-name="_fake_main" --summary="Sub summary"
+
+  run _run_sub_command "group"
+
+  assert_success
+  assert_line --regexp "^Usage: .* group <sub-command> "
+  assert_line --regexp "^  sub +Sub summary$"
+}
+
+@test "_run_sub_command prints the command help for the help flag" {
+  _register_command --command="group" --func-name="_fake_main" --summary="Group summary"
+  _register_sub_command --command="group" --sub-command="sub" --func-name="_fake_main" --summary="Sub summary"
+
+  run _run_sub_command "group" "--help"
+
+  assert_success
+  assert_line --regexp "^Usage: .* group <sub-command> "
+}
+
+@test "_run_sub_command fails for an unregistered command even without a sub-command" {
+  run _run_sub_command "group"
+
+  assert_failure
+  assert_log --scope "commander" --level "fatal" "Command [group] not registered"
+}

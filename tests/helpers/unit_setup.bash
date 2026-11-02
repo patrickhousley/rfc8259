@@ -27,6 +27,8 @@ _unit_setup() {
   source "${SCRIPTS_ROOT}/shared/log.bash"
   # shellcheck source=scripts/shared/commander.bash
   source "${SCRIPTS_ROOT}/shared/commander.bash"
+  # shellcheck source=scripts/shared/help.bash
+  source "${SCRIPTS_ROOT}/shared/help.bash"
   _unit_load_main_functions
 }
 

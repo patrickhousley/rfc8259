@@ -2,6 +2,7 @@
 set -euo pipefail
 
 COMMANDS=()
+SUB_COMMANDS=()
 declare -gA COMMAND_REGISTRY
 declare -gA SUB_COMMAND_REGISTRY
 
@@ -23,6 +24,31 @@ _check_sub_command_exists() {
   fi
 
   return 0
+}
+
+_command_has_sub_commands() {
+  local command="${1}"
+  local sub_command_name
+
+  for sub_command_name in "${SUB_COMMANDS[@]}"; do
+    if [[ "${sub_command_name}" == "${command}:"* ]]; then
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+_args_request_help() {
+  local arg
+
+  for arg in "$@"; do
+    if [[ "${arg,,}" == "--help" ]]; then
+      return 0
+    fi
+  done
+
+  return 1
 }
 
 _register_command() {
@@ -169,6 +195,7 @@ _register_sub_command() {
     _log "commander" "Sub-command [${sub_command_name}] already registered" "fatal"
   fi
 
+  SUB_COMMANDS+=("${sub_command_name}")
   SUB_COMMAND_REGISTRY["${sub_command_name}"]="${sub_command_name}"
   SUB_COMMAND_REGISTRY["${sub_command_name}:func_name"]="${func_name}"
   SUB_COMMAND_REGISTRY["${sub_command_name}:summary"]="${summary}"
@@ -189,6 +216,12 @@ _run_command() {
     _log "commander" "Unknown command: ${command}" "fatal"
   fi
 
+  # Commands with sub-commands leave --help to _run_sub_command so it can show the sub-command's help
+  if ! _command_has_sub_commands "${command}" && _args_request_help "$@"; then
+    _print_command_help --command "${command}"
+    return 0
+  fi
+
   local target_func
   target_func="${COMMAND_REGISTRY["${command}:func_name"]}"
   if _log_is_verbose_enabled; then
@@ -202,16 +235,26 @@ _run_command() {
 
 _run_sub_command() {
   local command="${1}"
-  local sub_command="${2}"
-  shift 2
+  local sub_command="${2:-}"
+  shift $(($# < 2 ? $# : 2))
 
   if ! _check_command_exists "${command}"; then
     _log "commander" "Command [${command}] not registered" "fatal"
   fi
 
+  if [[ -z "${sub_command}" || "${sub_command,,}" == "--help" ]]; then
+    _print_command_help --command "${command}"
+    return 0
+  fi
+
   local sub_command_name="${command}:${sub_command}"
   if ! _check_sub_command_exists "${sub_command_name}"; then
     _log "commander" "Sub-command [${sub_command_name}] not registered" "fatal"
+  fi
+
+  if _args_request_help "$@"; then
+    _print_sub_command_help --command "${command}" --sub-command "${sub_command}"
+    return 0
   fi
 
   local target_func

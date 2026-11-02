@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Associative arrays (declare -gA), namerefs (local -n) and case conversion (${var,,})
-SYSTEM_MIN_BASH_VERSION="4.3.0"
+SYSTEM_MIN_BASH_VERSION="4.4.0"
 
 # Entries are "binary:minimum version", an empty minimum only requires the binary to exist
 SYSTEM_REQUIRED_BINARIES=(
