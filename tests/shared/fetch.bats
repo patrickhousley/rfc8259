@@ -75,7 +75,7 @@ _download() {
   run _fetch_download --bogus
 
   assert_failure
-  assert_log --scope "_fetch_download" --level "fatal" "Unknown command argument [--bogus]"
+  assert_log --scope "_fetch_download" --level "fatal" "Unknown argument [--bogus]"
 }
 
 @test "_fetch_download accepts arguments in any case" {
@@ -282,4 +282,25 @@ _download() {
 
   assert_success
   assert_equal "$(find "${TMPDIR}" -type f)" ""
+}
+
+@test "_fetch_append_query starts the query string" {
+  run _fetch_append_query "https://example.test/items" "limit" "20"
+
+  assert_success
+  assert_output "https://example.test/items?limit=20"
+}
+
+@test "_fetch_append_query extends an existing query string" {
+  run _fetch_append_query "https://example.test/items?limit=20" "offset" "40"
+
+  assert_success
+  assert_output "https://example.test/items?limit=20&offset=40"
+}
+
+@test "_fetch_append_query defaults to an empty value" {
+  run _fetch_append_query "https://example.test/items" "limit"
+
+  assert_success
+  assert_output "https://example.test/items?limit="
 }

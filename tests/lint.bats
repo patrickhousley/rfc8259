@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
 
 setup() {
-  load '../helpers/unit_setup'
+  load 'helpers/unit_setup'
 
   _unit_setup
 
@@ -9,9 +9,11 @@ setup() {
   _stub_shellcheck
   _unit_source_script "lint"
 
-  stub_command "git"
+  REAL_GIT="$(command -v git)"
+  _stub_git
   PATH="${STUB_BIN}:${PATH}"
 
+  # Only tracked files are linted, modules is left untracked like in the real repository
   FIXTURE_ROOT="${BATS_TEST_TMPDIR}/project"
   mkdir -p "${FIXTURE_ROOT}/sub" "${FIXTURE_ROOT}/modules/dep"
   touch "${FIXTURE_ROOT}/a.bash" \
@@ -20,6 +22,20 @@ setup() {
     "${FIXTURE_ROOT}/modules/d.bash" \
     "${FIXTURE_ROOT}/modules/dep/e.bats"
   cd "${FIXTURE_ROOT}" || return 1
+  "${REAL_GIT}" init -q
+  "${REAL_GIT}" add a.bash sub/b.bats c.sh
+}
+
+# Installs a stub git that records every call except ls-files, which runs the real git
+_stub_git() {
+  {
+    printf '#!%s\n' "${BASH}"
+    # shellcheck disable=SC2016 # The stub script expands $1 and $@ when it runs, not when it is written
+    printf 'if [[ "$1" == "ls-files" ]]; then exec %q "$@"; fi\n' "${REAL_GIT}"
+    printf 'printf "%%s\\n" "$*" >>%q\n' "${STUB_BIN}/git.calls"
+    printf '%s\n' "${1:-exit 0}"
+  } >"${STUB_BIN}/git"
+  chmod +x "${STUB_BIN}/git"
 }
 
 # Installs a stub shellcheck where lint.bash expects the downloaded module binary
@@ -137,16 +153,35 @@ EOF
   assert_log --scope "_lint_main" --level "verbose" "Running shellcheck in write mode..."
 }
 
-@test "_lint_shellcheck_run checks bash and bats files outside of modules" {
+@test "_lint_shellcheck_run checks tracked bash and bats files" {
   run _lint_shellcheck_run
 
   assert_success
   run stub_calls shellcheck
-  assert_output --partial "./a.bash"
-  assert_output --partial "./sub/b.bats"
+  assert_output --regexp ' a\.bash sub/b\.bats$'
   refute_output --partial "c.sh"
   refute_output --partial "d.bash"
   refute_output --partial "e.bats"
+}
+
+@test "_lint_shellcheck_run skips tracked files that were deleted" {
+  rm a.bash
+
+  run _lint_shellcheck_run
+
+  assert_success
+  run stub_calls shellcheck
+  assert_output --regexp ' sub/b\.bats$'
+  refute_output --partial "a.bash"
+}
+
+@test "_lint_shellcheck_run does not run shellcheck without files to check" {
+  "${REAL_GIT}" rm -q --cached a.bash sub/b.bats
+
+  run _lint_shellcheck_run
+
+  assert_success
+  assert_equal "$(stub_calls shellcheck)" ""
 }
 
 @test "_lint_shellcheck_run passes the output format" {
@@ -194,7 +229,7 @@ EOF
 
 @test "_lint_shellcheck_apply_diff returns the git exit code" {
   echo "patch" >"${BATS_TEST_TMPDIR}/fix.patch"
-  stub_command "git" "exit 3"
+  _stub_git "exit 3"
 
   run _lint_shellcheck_apply_diff "${BATS_TEST_TMPDIR}/fix.patch"
 
@@ -211,7 +246,7 @@ EOF
 
 @test "_lint_shellcheck_write_loop applies fixes until none remain" {
   _stub_shellcheck_diff_once
-  stub_command "git" "cp \"\$2\" \"${BATS_TEST_TMPDIR}/applied.patch\""
+  _stub_git "cp \"\$2\" \"${BATS_TEST_TMPDIR}/applied.patch\""
 
   run _lint_shellcheck_write_loop
 
@@ -223,7 +258,7 @@ EOF
 
 @test "_lint_shellcheck_write_loop fails when git cannot apply fixes" {
   _stub_shellcheck_diff_once
-  stub_command "git" "exit 1"
+  _stub_git "exit 1"
 
   run _lint_shellcheck_write_loop
 

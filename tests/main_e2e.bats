@@ -1,9 +1,15 @@
 #!/usr/bin/env bats
 
 setup() {
-  load '../helpers/e2e_setup'
+  load 'helpers/common_setup'
+  load 'helpers/log_fixture'
+  load 'helpers/stub_fixture'
 
-  _e2e_setup
+  _common_setup
+  _stub_setup
+
+  # color.bash requires a terminal that supports colors
+  export TERM="xterm-256color"
 }
 
 @test "defaults to help command" {
@@ -18,7 +24,7 @@ setup() {
 
   assert_success
   local command
-  for command in help lint format test check; do
+  for command in help lint format test pokeapi pokeclient; do
     assert_line --regexp "^  ${command} +[A-Z]"
   done
 }
@@ -60,13 +66,6 @@ setup() {
 
   assert_success
   assert_output --regexp 'Example:.*?main.bash command'
-}
-
-@test "command arguments are passed through" {
-  run main.bash check --bogus
-
-  assert_failure
-  assert_log --scope "check" --level "fatal" "Unknown command argument [--bogus]"
 }
 
 @test "format rejects unknown arguments" {

@@ -43,7 +43,7 @@ setup() {
   run _module_git_clone --bogus
 
   assert_failure
-  assert_log --scope "_module_git_clone" --level "fatal" "Unknown command argument [--bogus]"
+  assert_log --scope "_module_git_clone" --level "fatal" "Unknown argument [--bogus]"
 }
 
 @test "_module_git_clone accepts arguments in any case" {
@@ -164,7 +164,7 @@ _stub_fetch() {
   run _module_download --bogus
 
   assert_failure
-  assert_log --scope "_module_download" --level "fatal" "Unknown command argument [--bogus]"
+  assert_log --scope "_module_download" --level "fatal" "Unknown argument [--bogus]"
 }
 
 @test "_module_download rejects a non numeric strip-components" {
