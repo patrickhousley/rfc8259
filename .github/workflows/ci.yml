@@ -36,11 +36,9 @@ jobs:
       checks: write
     steps:
       - uses: actions/checkout@v5
-      - name: Install kcov
-        run: sudo apt-get update && sudo apt-get install -y kcov
-      - run: ./main.bash test --junit --coverage
+      - run: ./main.bash test --junit
       - name: Publish test results
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && hashFiles('reports/junit/report.xml') != '' }}
         uses: mikepenz/action-junit-report@v6
         with:
           report_paths: reports/junit/report.xml
@@ -54,13 +52,10 @@ jobs:
         run: |
           {
             echo "### Tests"
-            awk -F'"' '/<testsuite /{for(i=1;i<NF;i++){if($i~/ tests=$/)t+=$(i+1); if($i~/ failures=$/)f+=$(i+1)}} END{print t" tests, "f" failures"}' reports/junit/report.xml
-            echo "### Coverage"
-            coverage_json="$(find reports/coverage -name coverage.json | sort | head -n 1)"
-            if [[ -n "${coverage_json}" ]]; then
-              jq -r '"\(.percent_covered)% (\(.covered_lines)/\(.total_lines) lines)"' "${coverage_json}"
+            if [[ -f reports/junit/report.xml ]]; then
+              awk -F'"' '/<testsuite /{for(i=1;i<NF;i++){if($i~/ tests=$/)t+=$(i+1); if($i~/ failures=$/)f+=$(i+1)}} END{print t" tests, "f" failures"}' reports/junit/report.xml
             else
-              echo "No coverage report was produced"
+              echo "No test report was produced"
             fi
           } >>"${GITHUB_STEP_SUMMARY}"
       - name: Upload reports

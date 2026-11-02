@@ -70,7 +70,7 @@ _print_help() {
 _print_command_help() {
   local command=""
   local sub_command_name
-  local sub_commands=()
+  local command_sub_commands=()
   local width=0
 
   while [[ $# -gt 0 ]]; do
@@ -98,7 +98,7 @@ _print_command_help() {
 
   for sub_command_name in "${SUB_COMMANDS[@]}"; do
     if [[ "${sub_command_name}" == "${command}:"* ]]; then
-      sub_commands+=("${sub_command_name}")
+      command_sub_commands+=("${sub_command_name}")
       if [[ $((${#sub_command_name} - ${#command} - 1)) -gt $width ]]; then
         width=$((${#sub_command_name} - ${#command} - 1))
       fi
@@ -106,7 +106,7 @@ _print_command_help() {
   done
 
   _help_title
-  if [[ ${#sub_commands[@]} -gt 0 ]]; then
+  if [[ ${#command_sub_commands[@]} -gt 0 ]]; then
     printf "Usage: %s %s <sub-command> [sub-command_args]\n\n" "${MAIN_SCRIPT}" "${command}"
   else
     printf "Usage: %s %s [options]\n\n" "${MAIN_SCRIPT}" "${command}"
@@ -114,9 +114,9 @@ _print_command_help() {
   printf "%s\n" "${COMMAND_REGISTRY["${command}:summary"]:-}"
   _help_print_options COMMAND_REGISTRY "${command}"
 
-  if [[ ${#sub_commands[@]} -gt 0 ]]; then
+  if [[ ${#command_sub_commands[@]} -gt 0 ]]; then
     printf "\nSub-commands:\n"
-    for sub_command_name in "${sub_commands[@]}"; do
+    for sub_command_name in "${command_sub_commands[@]}"; do
       _help_print_entry SUB_COMMAND_REGISTRY "${sub_command_name}" "${sub_command_name#*:}" "${width}" --summary-only
     done
     printf "\nRun '%s %s <sub-command> --help' for details\n" "${MAIN_SCRIPT}" "${command}"
