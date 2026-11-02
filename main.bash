@@ -7,6 +7,10 @@ MODULES_ROOT="${PROJECT_ROOT}/modules"
 SCRIPTS_ROOT="${PROJECT_ROOT}/scripts"
 DATA_ROOT="${PROJECT_ROOT}/data"
 
+# shellcheck source=scripts/shared/system.bash
+source "$SCRIPTS_ROOT/shared/system.bash"
+_system_validate
+
 # Helpers
 # shellcheck source=scripts/shared/color.bash
 source "$SCRIPTS_ROOT/shared/color.bash"

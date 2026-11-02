@@ -88,3 +88,13 @@ setup() {
   assert_success
   assert_log --scope "logger" --level "verbose" "Enabled verbose logging"
 }
+
+@test "fails when a required binary is too old" {
+  stub_command "curl" "echo 'curl 7.0.0'"
+
+  PATH="${STUB_BIN}:${PATH}" run main.bash help
+
+  assert_failure
+  assert_log --scope "system" --level "error" "[curl] 7.0.0 is older than the required 7.76.0"
+  assert_log --scope "system" --level "fatal" "System requirements not met"
+}
